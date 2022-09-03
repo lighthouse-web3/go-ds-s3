@@ -116,9 +116,7 @@ Otherwise, you need to do a datastore migration.
 
 ## Contribute
 
-Feel free to join in. All welcome. Open an [issue](https://github.com/ipfs/go-ipfs-example-plugin/issues)!
-
-This repository falls under the IPFS [Code of Conduct](https://github.com/ipfs/community/blob/master/code-of-conduct.md).
+Feel free to join in. All welcome. Open an [issue](https://github.com/samperfect/go-ds-s3/issues)!
 
 ### Want to hack on IPFS?
 
