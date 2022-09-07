@@ -4,10 +4,11 @@ import (
 	"reflect"
 	"testing"
 
-	s3ds "github.com/lighthouse-web3/go-ds-s3"
+	s3ds "github.com/samperfect/go-ds-s3"
 )
 
 func TestS3PluginDatastoreConfigParser(t *testing.T) {
+
 	testcases := []struct {
 		Input  map[string]interface{}
 		Want   *S3Config

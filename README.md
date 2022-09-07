@@ -6,12 +6,12 @@ This is an implementation of the datastore interface backed by amazon s3.
 
 ## Building and Installing
 
-You must build the plugin with the *exact* version of go used to build the go-ipfs binary you will use it with. You can find the go version for go-ipfs builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/go-ipfs/v0.4.22/build-info or by running `ipfs version --all`.
+You must build the plugin with the _exact_ version of go used to build the go-ipfs binary you will use it with. You can find the go version for go-ipfs builds from dist.ipfs.io in the build-info file, e.g. https://dist.ipfs.io/go-ipfs/v0.4.22/build-info or by running `ipfs version --all`.
 
 In addition to needing the exact version of go, you need to build the correct version of this plugin.
 
-* To build against a released version of go-ipfs, checkout the `release/v$VERSION` branch and build.
-* To build against a custom (local) build of go-ipfs, run `make IPFS_VERSION=/path/to/go-ipfs/source`.
+- To build against a released version of go-ipfs, checkout the `release/v$VERSION` branch and build.
+- To build against a custom (local) build of go-ipfs, run `make IPFS_VERSION=/path/to/go-ipfs/source`.
 
 You can then install it into your local IPFS repo by running `make install`.
 
@@ -53,11 +53,12 @@ For a brand new ipfs instance (no data stored yet):
 1. Copy s3plugin.so $IPFS_DIR/plugins/go-ds-s3.so (or run `make install` if you are installing locally).
 2. Run `ipfs init`.
 3. Edit $IPFS_DIR/config to include s3 details (see Configuration below).
-4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (*Don't do this on an instance with existing data - it will be lost*).
+4. Overwrite `$IPFS_DIR/datastore_spec` as specified below (_Don't do this on an instance with existing data - it will be lost_).
 
 ### Configuration
 
 The config file should include the following:
+
 ```json
 {
   "Datastore": {
@@ -116,7 +117,7 @@ Otherwise, you need to do a datastore migration.
 
 ## Contribute
 
-Feel free to join in. All welcome. Open an [issue](https://github.com/lighthouse-web3/go-ds-s3/issues)!
+Feel free to join in. All welcome. Open an [issue](https://github.com/samperfect/go-ds-s3/issues)!
 
 ### Want to hack on IPFS?
 
