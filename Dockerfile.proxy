@@ -37,22 +37,28 @@ ENV IPFS_PATH /data/ipfs
 ENV API_PORT 5002
 ENV GATEWAY_PORT 8080
 ENV SWARM_PORT 4001
+ENV PROXY_PORT 5050
 
 # defining args to be passed in at build time
 ARG AWS_SECRET_KEY
 ARG AWS_ACCESS_KEY
 ARG AWS_REGION
 ARG AWS_S3_BUCKET
+ARG GITHUB_TOKEN
+ARG IPFS_ENDPOINT
 
 ENV AWS_SECRET_KEY  $AWS_SECRET_KEY
 ENV AWS_ACCESS_KEY  $AWS_ACCESS_KEY
 ENV AWS_REGION      $AWS_REGION
 ENV AWS_S3_BUCKET   $AWS_S3_BUCKET
+ENV GITHUB_TOKEN    $GITHUB_TOKEN
+ENV IPFS_ENDPOINT   $IPFS_ENDPOINT
 
 EXPOSE ${SWARM_PORT}
 # This may introduce security risk to expose API_PORT public
 # EXPOSE ${API_PORT}
 EXPOSE ${GATEWAY_PORT}
+EXPOSE ${PROXY_PORT}
 
 RUN mkdir -p ${IPFS_PATH} 
 
@@ -72,5 +78,18 @@ RUN ipfs config --json Datastore.Spec "{\"mounts\":[{\"child\":{\"accessKey\":\"
 
 RUN echo "{\"mounts\":[{\"bucket\":\"${AWS_S3_BUCKET}\",\"mountpoint\":\"/blocks\",\"region\":\"${AWS_REGION}\",\"rootDirectory\":\"\"},{\"mountpoint\":\"/\",\"path\":\"datastore\",\"type\":\"levelds\"}],\"type\":\"mount\"}" > $IPFS_PATH/datastore_spec
 
+RUN apt update -y && \
+    apt install -y nodejs && \
+    echo "NODE VERSION $(node --version)"
+
+RUN git clone https://samperfect:${GITHUB_TOKEN}@github.com/lighthouse-web3/node-authentication-middleware.git proxy && \
+    cd proxy && \
+    apt install -y npm && \
+    npm install && \
+    npm install -g pm2
+
+RUN echo "PM2 VERSION -- $(pm2 --version)" && \
+    stat proxy/app.js
+
 # by default, run `ipfs daemon` to start as a running node
-ENTRYPOINT ipfs daemon
+ENTRYPOINT pm2 start proxy/app.js && ipfs daemon
