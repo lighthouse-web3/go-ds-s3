@@ -117,7 +117,7 @@ Otherwise, you need to do a datastore migration.
 
 ## Contribute
 
-Feel free to join in. All welcome. Open an [issue](https://github.com/samperfect/go-ds-s3/issues)!
+Feel free to join in. All welcome. Open an [issue](https://github.com/lighthouse-web3/go-ds-s3/issues)!
 
 ### Want to hack on IPFS?
 
