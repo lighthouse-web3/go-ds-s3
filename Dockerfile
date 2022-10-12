@@ -14,12 +14,12 @@ LABEL maintainer "Perfection <perfection@lighthouse.storage>"
 RUN git clone https://github.com/ipfs/go-ipfs && \
     cd go-ipfs && \
     #git checkout release-v0.15.0 && \
-    go get github.com/lighthouse-web3/go-ds-s3/plugin@v0.14.0
+    go get github.com/opensaucerer/go-ds-s3/plugin@v0.14.0
 
 
 # Add the plugin to the preload list.   
 RUN cd go-ipfs && \
-    echo "\ns3ds github.com/lighthouse-web3/go-ds-s3/plugin 0" >> plugin/loader/preload_list &&\
+    echo "\ns3ds github.com/opensaucerer/go-ds-s3/plugin 0" >> plugin/loader/preload_list &&\
     cat plugin/loader/preload_list && \
     cat plugin/loader/preload.go && \
     make build && \
