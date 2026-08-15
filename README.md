@@ -96,6 +96,7 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
             "type": "s3ds",
             "region": "us-east-1",
             "bucket": "$bucketname",
+            "buckets": ["$olderbucket"],
             "rootDirectory": "$bucketsubdirectory",
             "regionEndpoint": "us-east-1.linodeobjects.com",
             "accessKey": "",
@@ -105,6 +106,28 @@ If you are on another S3 compatible provider, e.g. Linode, then your config shou
           "prefix": "s3.datastore",
           "type": "measure"
         },
+```
+
+### Multiple buckets
+
+Hetzner (and some other S3-compatible stores) cap the number of objects per bucket. When the current write bucket is full, point `bucket` at the new write bucket and list older buckets in `buckets`.
+
+- **Put / Delete / Query** use `bucket` only. Writes stay on one bucket.
+- **Get / Has / GetSize** try `bucket` first, then each name in `buckets`, and return not-found only after every bucket misses.
+- There is no CID routing. One Kubo process, one plugin config.
+- `buckets` can be a JSON array (`["old-a","old-b"]`) or a comma-separated string (`"old-a,old-b"`). The write bucket is always prepended and duplicates are ignored.
+- `datastore_spec` still identifies the write location (`bucket`). Adding read-only buckets does not require a datastore migration.
+
+```json
+"child": {
+  "type": "s3ds",
+  "region": "fsn1",
+  "bucket": "lighthouse-blocks-2",
+  "buckets": ["lighthouse-blocks-1"],
+  "regionEndpoint": "fsn1.your-objectstorage.com",
+  "accessKey": "",
+  "secretKey": ""
+}
 ```
 
 If you are configuring a brand new ipfs instance without any data, you can overwrite the datastore_spec file with:

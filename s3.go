@@ -51,6 +51,7 @@ type Config struct {
 	SecretKey           string
 	SessionToken        string
 	Bucket              string
+	Buckets             []string
 	Region              string
 	RegionEndpoint      string
 	RootDirectory       string
@@ -119,19 +120,23 @@ func (s *S3Bucket) Sync(ctx context.Context, prefix ds.Key) error {
 }
 
 func (s *S3Bucket) Get(ctx context.Context, k ds.Key) ([]byte, error) {
-	resp, err := s.S3.GetObjectWithContext(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+	var data []byte
+	err := s.withReadBuckets(func(bucket string) error {
+		resp, err := s.S3.GetObjectWithContext(ctx, &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s.s3Path(k.String())),
+		})
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		data, err = ioutil.ReadAll(resp.Body)
+		return err
 	})
 	if err != nil {
-		if isNotFound(err) {
-			return nil, ds.ErrNotFound
-		}
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	return ioutil.ReadAll(resp.Body)
+	return data, nil
 }
 
 func (s *S3Bucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
@@ -146,17 +151,21 @@ func (s *S3Bucket) Has(ctx context.Context, k ds.Key) (exists bool, err error) {
 }
 
 func (s *S3Bucket) GetSize(ctx context.Context, k ds.Key) (size int, err error) {
-	resp, err := s.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(s.s3Path(k.String())),
+	err = s.withReadBuckets(func(bucket string) error {
+		resp, err := s.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s.s3Path(k.String())),
+		})
+		if err != nil {
+			return err
+		}
+		size = int(*resp.ContentLength)
+		return nil
 	})
 	if err != nil {
-		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "NotFound" {
-			return -1, ds.ErrNotFound
-		}
 		return -1, err
 	}
-	return int(*resp.ContentLength), nil
+	return size, nil
 }
 
 func (s *S3Bucket) Delete(ctx context.Context, k ds.Key) error {
@@ -254,9 +263,64 @@ func (s *S3Bucket) s3Path(p string) string {
 	return path.Join(s.RootDirectory, p)
 }
 
+// readBuckets is the Get/Has/GetSize walk order: write bucket first, then
+// any extra buckets. Put/Delete/Query stay on Config.Bucket only.
+func (s *S3Bucket) readBuckets() []string {
+	n := 1 + len(s.Buckets)
+	out := make([]string, 0, n)
+	seen := make(map[string]struct{}, n)
+	add := func(b string) {
+		if b == "" {
+			return
+		}
+		if _, ok := seen[b]; ok {
+			return
+		}
+		seen[b] = struct{}{}
+		out = append(out, b)
+	}
+	add(s.Bucket)
+	for _, b := range s.Buckets {
+		add(b)
+	}
+	return out
+}
+
+// withReadBuckets calls fn for each read bucket until one succeeds. A
+// not-found error continues the walk; any other error stops it.
+func (s *S3Bucket) withReadBuckets(fn func(bucket string) error) error {
+	for _, bucket := range s.readBuckets() {
+		err := fn(bucket)
+		if err == nil {
+			return nil
+		}
+		if isNotFound(err) {
+			continue
+		}
+		return err
+	}
+	return ds.ErrNotFound
+}
+
 func isNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	if err == ds.ErrNotFound {
+		return true
+	}
 	s3Err, ok := err.(awserr.Error)
-	return ok && s3Err.Code() == s3.ErrCodeNoSuchKey
+	if !ok {
+		return false
+	}
+	switch s3Err.Code() {
+	case s3.ErrCodeNoSuchKey, s3.ErrCodeNoSuchBucket, "NotFound":
+		return true
+	}
+	if reqErr, ok := err.(awserr.RequestFailure); ok && reqErr.StatusCode() == 404 {
+		return true
+	}
+	return false
 }
 
 type s3Batch struct {
