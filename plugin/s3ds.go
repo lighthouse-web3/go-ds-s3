@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ipfs/kubo/plugin"
 	"github.com/ipfs/kubo/repo"
@@ -98,10 +99,20 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 			}
 		}
 
+		var buckets []string
+		if v, ok := m["buckets"]; ok {
+			var err error
+			buckets, err = parseBuckets(v)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		return &S3Config{
 			cfg: s3ds.Config{
 				Region:              region,
 				Bucket:              bucket,
+				Buckets:             buckets,
 				AccessKey:           accessKey,
 				SecretKey:           secretKey,
 				SessionToken:        sessionToken,
@@ -111,6 +122,53 @@ func (s3p S3Plugin) DatastoreConfigParser() fsrepo.ConfigFromMap {
 				CredentialsEndpoint: credentialsEndpoint,
 			},
 		}, nil
+	}
+}
+
+// parseBuckets accepts a JSON array or a comma-separated string. The write
+// bucket is always tried first on Get; this list is extra read buckets.
+func parseBuckets(v interface{}) ([]string, error) {
+	switch t := v.(type) {
+	case []interface{}:
+		out := make([]string, 0, len(t))
+		for i, item := range t {
+			s, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("s3ds: buckets[%d] not a string", i)
+			}
+			s = strings.TrimSpace(s)
+			if s == "" {
+				return nil, fmt.Errorf("s3ds: buckets[%d] is empty", i)
+			}
+			out = append(out, s)
+		}
+		return out, nil
+	case []string:
+		out := make([]string, 0, len(t))
+		for i, s := range t {
+			s = strings.TrimSpace(s)
+			if s == "" {
+				return nil, fmt.Errorf("s3ds: buckets[%d] is empty", i)
+			}
+			out = append(out, s)
+		}
+		return out, nil
+	case string:
+		if strings.TrimSpace(t) == "" {
+			return nil, nil
+		}
+		parts := strings.Split(t, ",")
+		out := make([]string, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			out = append(out, p)
+		}
+		return out, nil
+	default:
+		return nil, fmt.Errorf("s3ds: buckets must be a list or comma-separated string")
 	}
 }
 
